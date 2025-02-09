@@ -34,7 +34,7 @@ def extract_samples(output_filename="concatenated_samples.txt", num_samples=10):
     print(f"{num_samples} samples have been concatenated and saved to '{output_filename}'.")
 
 
-def convert_text_to_numbers(input_filename="concatenated_samples.txt", output_filename="utf8_bytes.txt"):
+def convert_text_to_utf8_byte_values(input_filename="concatenated_samples.txt", output_filename="utf8_bytes.txt"):
     """
     Reads text from the input file, encodes it to UTF-8 (yielding bytes),
     converts each byte to its integer value, and writes the numbers (space-separated)
@@ -52,7 +52,7 @@ def convert_text_to_numbers(input_filename="concatenated_samples.txt", output_fi
     print(f"Text from '{input_filename}' has been converted to UTF-8 numbers and saved to '{output_filename}'.")
 
 
-def convert_text_to_bits(input_filename="concatenated_samples.txt", output_filename="utf8_bits.txt"):
+def convert_text_to_utf8_bit_strings(input_filename="concatenated_samples.txt", output_filename="utf8_bits.txt"):
     """
     Reads text from the input file, encodes it to UTF-8 (yielding bytes),
     converts each byte to its 8-bit binary representation,
@@ -145,8 +145,8 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python token-demo.py extract_samples")
-        print("  python token-demo.py convert_text_to_numbers")
-        print("  python token-demo.py convert_text_to_bits")
+        print("  python token-demo.py convert_text_to_utf8_byte_values")
+        print("  python token-demo.py convert_text_to_utf8_bit_strings")
         print("  python token-demo.py convert_text_to_tokens")
         print('  python token-demo.py convert_tokens_to_text "91 860 287 11579 3962 5659 ..."')
         print('  python token-demo.py predict_next_token "91 860 287 11579 3962 5659 25 57049 28257" [top_k]')
@@ -156,10 +156,10 @@ if __name__ == "__main__":
     
     if command == "extract_samples":
         extract_samples()
-    elif command == "convert_text_to_numbers":
-        convert_text_to_numbers()
-    elif command == "convert_text_to_bits":
-        convert_text_to_bits()
+    elif command == "convert_text_to_utf8_byte_values":
+        convert_text_to_utf8_byte_values()
+    elif command == "convert_text_to_utf8_bit_strings":
+        convert_text_to_utf8_bit_strings()
     elif command == "convert_text_to_tokens":
         convert_text_to_tokens()
     elif command == "convert_tokens_to_text":
@@ -179,5 +179,5 @@ if __name__ == "__main__":
         predict_next_token(token_string, top_k)
     else:
         print(f"Unknown command '{command}'.")
-        print("Available commands: extract_samples, convert_text_to_numbers, convert_text_to_bits, convert_text_to_tokens, convert_tokens_to_text, predict_next_token")
+        print("Available commands: extract_samples, convert_text_to_utf8_byte_values, convert_text_to_utf8_bit_strings, convert_text_to_tokens, convert_tokens_to_text, predict_next_token")
         sys.exit(1)
