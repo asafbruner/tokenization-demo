@@ -107,38 +107,74 @@ def convert_tokens_to_text(token_string):
     print(decoded_text)
 
 
-def predict_next_token(token_string, top_k=5):
+def predict_next_token(input_str, top_k=5, num_predict=1):
     """
-    Given a space-separated string of GPT2 token IDs,
-    this function directly converts them into a tensor,
-    uses GPT2 to predict the next token, and prints the top_k
-    predictions along with their probability distribution.
+    If num_predict == 1:
+      Computes and prints the top_k predictions for the next token along with their probabilities.
+    If num_predict > 1:
+      Iteratively predicts one token at a time (using greedy decoding) and appends it to the current sequence.
+      After each iteration, the function prints the updated sequence as token IDs and as decoded text.
+      
+    The input can be provided as a space-separated list of token numbers (e.g. "91 7680 278")
+    or as plain text (e.g. "Hello, how are you?").
     """
-    try:
-        token_ids = [int(x) for x in token_string.strip().split()]
-    except ValueError:
-        print("Error: token_string must be a space-separated list of integers.")
-        sys.exit(1)
-    
-    # Directly create a tensor from the token IDs.
-    input_ids = torch.tensor([token_ids])
-    
+    # Load tokenizer and model (using GPT-2 as an example)
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     model = AutoModelForCausalLM.from_pretrained("gpt2")
     model.eval()
     
-    with torch.no_grad():
-        outputs = model(input_ids)
-    logits = outputs.logits  # shape: (batch_size, seq_length, vocab_size)
-    next_token_logits = logits[0, -1, :]
+    # Ensure pad_token is set
+    if model.config.pad_token_id is None:
+        model.config.pad_token_id = tokenizer.eos_token_id
+
+    # Try to interpret the input as token numbers.
+    tokens_possible = input_str.strip().split()
+    try:
+        token_ids = [int(x) for x in tokens_possible]
+        input_type = "token_ids"
+    except ValueError:
+        # If conversion fails, assume it's a plain text string.
+        token_ids = tokenizer.encode(input_str)
+        input_type = "text"
     
-    probabilities = torch.softmax(next_token_logits, dim=0)
-    top_prob, top_indices = torch.topk(probabilities, top_k)
-    top_tokens = [tokenizer.convert_ids_to_tokens(idx.item()) for idx in top_indices]
+    # Convert token_ids list into a tensor (batch size 1)
+    current_ids = torch.tensor([token_ids])
     
-    print("Top {} predictions for the next token:".format(top_k))
-    for token, prob in zip(top_tokens, top_prob):
-        print(f"Token: '{token}' - Probability: {prob.item():.4f}")
+    if num_predict == 1:
+        # Single-token prediction mode:
+        with torch.no_grad():
+            outputs = model(current_ids)
+        logits = outputs.logits  # shape: (1, seq_length, vocab_size)
+        next_token_logits = logits[0, -1, :]
+        probabilities = torch.softmax(next_token_logits, dim=0)
+        top_prob, top_indices = torch.topk(probabilities, top_k)
+        top_tokens = [tokenizer.convert_ids_to_tokens(idx.item()) for idx in top_indices]
+        
+        print("Top {} predictions for the next token:".format(top_k))
+        for token, prob in zip(top_tokens, top_prob):
+            print(f"Token: '{token}' - Probability: {prob.item():.4f}")
+    else:
+        print("Iterative generation mode:")
+        # Print the initial prompt.
+        print("Initial token sequence:", " ".join(map(str, current_ids[0].tolist())))
+        print("Decoded text:", tokenizer.decode(current_ids[0], skip_special_tokens=True))
+        for i in range(num_predict):
+            with torch.no_grad():
+                outputs = model(current_ids)
+            logits = outputs.logits
+            next_token_logits = logits[0, -1, :]
+            probabilities = torch.softmax(next_token_logits, dim=0)
+            # Greedy decoding: choose the token with the highest probability.
+            next_token_id = torch.argmax(probabilities).unsqueeze(0).unsqueeze(0)
+            # Append the predicted token to current_ids.
+            current_ids = torch.cat((current_ids, next_token_id), dim=1)
+            # Print the updated sequence.
+            token_seq = current_ids[0].tolist()
+            decoded = tokenizer.decode(current_ids[0], skip_special_tokens=True)
+            #print(f"After {i+1} prediction(s):")
+            #print("Token sequence:", " ".join(map(str, token_seq)))
+            print("Decoded text:", decoded)
+
 
 
 if __name__ == "__main__":
@@ -172,11 +208,13 @@ if __name__ == "__main__":
     elif command == "predict_next_token":
         if len(sys.argv) < 3:
             print("Error: Please provide a string of token IDs as a parameter.")
-            print('Example: python token-demo.py predict_next_token "91 860 287 11579 3962 5659 25 57049 28257"')
+            print('Example: python token-demo.py predict_next_token "91 860 287 11579 3962"')
             sys.exit(1)
         token_string = sys.argv[2]
         top_k = int(sys.argv[3]) if len(sys.argv) >= 4 else 5
-        predict_next_token(token_string, top_k)
+        num_predict = int(sys.argv[4]) if len(sys.argv) >= 5 else 1
+        predict_next_token(token_string, top_k, num_predict)
+
     else:
         print(f"Unknown command '{command}'.")
         print("Available commands: extract_samples, convert_text_to_utf8_byte_values, convert_text_to_utf8_bit_strings, convert_text_to_tokens, convert_tokens_to_text, predict_next_token")
